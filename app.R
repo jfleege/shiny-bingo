@@ -75,6 +75,7 @@ ui <- fluidPage(
   # dark mode option
   input_dark_mode(id = "mode"),
   
+  # changes player text characteristics
   tags$style(HTML("
   .control-label[for='players'] {
     font-size: 20px;
@@ -82,6 +83,7 @@ ui <- fluidPage(
   }
   ")),
   
+  # changes label characteristics
   tags$style(HTML("
     .radio label {
       font-size: 18px;
@@ -92,6 +94,14 @@ ui <- fluidPage(
       transform: scale(1.4);
       margin-right: 8px;
     }
+  ")),
+  
+  # changes title characteristics
+  tags$style(HTML("
+  h2 {
+    font-size: 32px;
+    font-weight: bold;
+  }
   ")),
   
   # application title
@@ -123,10 +133,13 @@ ui <- fluidPage(
         box-shadow: 2px 2px 5px grey;
       "),
       
-      textOutput("called_number"),
+      br(), br(),
       
-      textOutput("winner_text")
+      uiOutput("called_number"),
+      
+      uiOutput("winner_text")
     ),
+    
     mainPanel(
       uiOutput("bingo_boards")  # will be used to render the board tables
     )
@@ -151,16 +164,6 @@ server <- function(input, output) {
     rv$numbers_left <- 1:50
     rv$move_count <- 0
     rv$winner <- NULL
-    
-    # bingo moves notification
-    lapply(1:rv$players, function(i) {
-      moves_left <- moves_till_bingo(rv$boards[[i]])
-      showNotification(
-        paste("Player", i, "is", moves_left, "move(s) away from Bingo!"),
-        type = "warning",  # or "warning"/"error" if needed
-        duration = 2
-      )
-    })
   })
   
   observeEvent(input$next_num, {
@@ -179,34 +182,76 @@ server <- function(input, output) {
       }
     }
     
-    output$called_number <- renderText({
-      paste("Last number called:", number_drawn)
+    output$called_number <- renderUI({
+      HTML(paste0("<div style='font-weight: bold; font-size: 18px;'>Last number called: ", number_drawn, "</div>"))
+    })
+    
+    # bingo moves notification
+    lapply(1:rv$players, function(i) {
+      moves_left <- moves_till_bingo(rv$boards[[i]])
+      showNotification(
+        paste("Player", i, "is", moves_left, "move(s) away from Bingo!"),
+        type = "warning",  # or "warning"/"error" if needed
+        duration = 1
+      )
     })
   })
   
-  output$winner_text <- renderText({
+  output$winner_text <- renderUI({
     req(rv$winner)
-    rv$winner
+    HTML(paste0("<div style=' font-weight: bold; font-style: italic; font-size: 18px; color: green;'>", rv$winner, "</div>"))
   })
   
   output$bingo_boards <- renderUI({
-    tagList(
-      lapply(1:rv$players, function(i) {
-        tagList(
-          strong(paste("Player", i)),
-          tableOutput(paste0("board", i))
-        )
-      })
-    )
-  })
+  fluidRow(
+    lapply(1:rv$players, function(i) {
+      column(
+        width = 6,
+        tags$h4(style = "font-weight: bold; font-size: 24px;", paste("Player", i)),
+        tableOutput(paste0("board", i))
+      )
+    })
+  )
+})
   
   observe({
     for (i in 1:rv$players) {
       local({
         idx <- i
-        output[[paste0("board", idx)]] <- renderTable({
-          rv$boards[[idx]]
-        }, bordered = TRUE, align = "c")
+        output[[paste0("board", idx)]] <- renderUI({
+          board <- rv$boards[[idx]]
+          
+          # build each row of the table
+          table_rows <- lapply(1:5, function(r) {
+            tags$tr(
+              lapply(1:5, function(c) {
+                val <- board[r, c]
+                
+                # cell styling
+                style <- if (val == "X") {
+                  "background-color: lightcoral; font-weight: bold; text-align: center;"
+                } else if (val == "FREE") {
+                  "background-color: lightgreen; font-weight: bold; font-style: italic; text-align: center;"
+                } else {
+                  "text-align: center;"
+                }
+                
+                tags$td(style = paste("border: 3px solid gray; padding: 10px;", style), val)
+              })
+            )
+          })
+          
+          # assemble full table
+          tags$table(
+            style = "border-collapse: collapse; margin-bottom: 30px;",
+            tags$thead(
+              tags$tr(lapply(c("B", "I", "N", "G", "O"), function(h) {
+                tags$th(style = "border: 3px solid gray; padding: 10px; font-size: 18px;", h)
+              }))
+            ),
+            tags$tbody(table_rows)
+          )
+        })
       })
     }
   })
