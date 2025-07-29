@@ -68,22 +68,69 @@ moves_till_bingo <- function(card) {
 
 # defines UI for application that creates/plays bingo
 ui <- fluidPage(
+  
+  # change theme
+  theme = bs_theme(version = 5, bootswatch = "united"),
+  
+  # dark mode option
+  input_dark_mode(id = "mode"),
+  
+  tags$style(HTML("
+  .control-label[for='players'] {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  ")),
+  
+  tags$style(HTML("
+    .radio label {
+      font-size: 18px;
+      padding: 5px 0;
+    }
 
-    # application title
-    titlePanel("Bingo in R (Shiny Edition)"),
-
-    sidebarLayout(
-      sidebarPanel(
-        radioButtons("players", "Number of players:", choices = c(1, 2), selected = 1),
-        actionButton("new_game", "Start New Game"),
-        actionButton("next_num", "Call Next Number"),
-        textOutput("called_number"),
-        textOutput("winner_text")
-      ),
-      mainPanel(
-        uiOutput("bingo_boards")  # will be used to render the board tables
-      )
+    .radio input[type='radio'] {
+      transform: scale(1.4);
+      margin-right: 8px;
+    }
+  ")),
+  
+  # application title
+  titlePanel("Bingo in R (Shiny Edition)"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      radioButtons("players", "Number of players:", choices = c(1, 2), selected = NULL),
+      
+      actionButton("new_game", "Start New Game", style = 
+        "font-size: 18px;
+        padding: 6px 10px;
+        background-color: orange;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        box-shadow: 2px 2px 5px grey;
+      "),
+      
+      br(), br(),
+      
+      actionButton("next_num", "Call Next Number", style = 
+        "font-size: 18px;
+        padding: 6px 10px;
+        background-color: orange;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        box-shadow: 2px 2px 5px grey;
+      "),
+      
+      textOutput("called_number"),
+      
+      textOutput("winner_text")
+    ),
+    mainPanel(
+      uiOutput("bingo_boards")  # will be used to render the board tables
     )
+  )
 )
 
 #---------------------------------------------------------------#
@@ -104,6 +151,16 @@ server <- function(input, output) {
     rv$numbers_left <- 1:50
     rv$move_count <- 0
     rv$winner <- NULL
+    
+    # bingo moves notification
+    lapply(1:rv$players, function(i) {
+      moves_left <- moves_till_bingo(rv$boards[[i]])
+      showNotification(
+        paste("Player", i, "is", moves_left, "move(s) away from Bingo!"),
+        type = "warning",  # or "warning"/"error" if needed
+        duration = 2
+      )
+    })
   })
   
   observeEvent(input$next_num, {
@@ -159,3 +216,4 @@ server <- function(input, output) {
 
 # run the application 
 shinyApp(ui = ui, server = server)
+
