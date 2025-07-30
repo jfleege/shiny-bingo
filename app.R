@@ -83,7 +83,14 @@ ui <- fluidPage(
     box-shadow: none !important;
   }
 ")),
-    
+  
+  tags$style(HTML("
+  table {
+    margin-left: auto;
+    margin-right: auto;
+  }
+")),
+  
   wellPanel(
     h2("Bingo in R (Shiny Edition)", 
        style = "
