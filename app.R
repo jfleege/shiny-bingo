@@ -51,7 +51,7 @@ moves_till_bingo <- function(card) {
 }
 
 #---------------------------------------------------------------#
- # stylizes panels so that they can be used in totallity 
+ # stylizes panels so that they can be used in totality 
 ui <- fluidPage(
   theme = bs_theme(version = 5, bootswatch = "united"),
   input_dark_mode(id = "mode"),
@@ -103,7 +103,7 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      radioButtons("players", "Number of players:", choices = c(1, 2), selected = NULL),
+      radioButtons("players", "Number of players:", choices = c(1, 2, 3, 4), selected = NULL),
       
       actionButton("new_game", "Start New Game", style = 
                      "font-size: 18px; padding: 6px 10px; background-color: orange; color: white;
@@ -201,7 +201,7 @@ server <- function(input, output) {
   
   # renders bingo boards
   output$bingo_boards <- renderUI({
-    if (rv$players == 2) {
+    if (rv$players == 4) {
       fluidRow(
         column(5, wellPanel(
           h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
@@ -210,6 +210,44 @@ server <- function(input, output) {
         column(5, wellPanel(
           h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
           tableOutput("board2")
+        )),
+        column(5, wellPanel(
+          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board1")
+        )),
+        column(5, wellPanel(
+          h4("Player 4", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board2")
+        ))
+      )
+    } else if (rv$players == 4) {
+      fluidRow(
+        column(5, wellPanel(
+          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board1")
+        )),
+        column(5, wellPanel(
+          h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board2")
+        )),
+        column(5, wellPanel(
+          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board1")
+        ))
+      )
+    } else if (rv$players == 3) {
+      fluidRow(
+        column(5, wellPanel(
+          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board1")
+        )),
+        column(5, wellPanel(
+          h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board2")
+        )),
+        column(5, wellPanel(
+          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
+          tableOutput("board1")
         ))
       )
     } else {
