@@ -50,6 +50,9 @@ moves_till_bingo <- function(card) {
   return(min(counts))
 }
 
+# default name pool for player name entering
+default_names <- c("Mordecai", "Rigby", "Skips", "Benson", "Muscle Man", "Pops", "Eileen", "CJ")
+
 #---------------------------------------------------------------#
  # stylizes panels so that they can be used in totality 
 ui <- fluidPage(
@@ -123,6 +126,8 @@ ui <- fluidPage(
     sidebarPanel(
       radioButtons("players", "Number of players:", choices = c(1, 2, 3, 4), selected = NULL),
       
+      uiOutput("player_names_ui"),
+      
       actionButton("new_game", "Start New Game", style = 
                      "font-size: 18px; padding: 6px 10px; background-color: orange; color: white;
          border-radius: 8px; border: none; box-shadow: 2px 2px 5px grey; margin-top: 8px;"),
@@ -179,15 +184,47 @@ server <- function(input, output) {
   
   observeEvent(input$new_game, {
     rv$players <- input$players
-    rv$boards <- lapply(1:rv$players, function(i) create_board())
+    rv$player_names <- sapply(1:input$players, function(i) {
+      user_input <- input[[paste0("player_name_", i)]]
+      if (nzchar(trimws(user_input))) {
+        user_input
+      } else {
+        available <- setdiff(default_names, rv$player_names)
+        if (length(available) > 0) {
+          sample(available, 1)
+        } else {
+          paste("Player", i)
+        }
+      }
+    })
+    
+    rv$boards <- replicate(rv$players, create_board(), simplify = FALSE)
     rv$numbers_left <- 1:50
     rv$move_count <- 0
     rv$winner <- NULL
   })
   
+  # renders player name box
+  output$player_names_ui <- renderUI({
+    req(input$players)  # only show if players are selected
+    
+    lapply(1:input$players, function(i) {
+      textInput(
+        inputId = paste0("player_name_", i),
+        label = paste("Enter name for Player", i, "(or leave blank for random):"),
+        value = ""
+      )
+    })
+  })
+  
   # next number logic
   observeEvent(input$next_num, {
     if (length(rv$numbers_left) == 0 || !is.null(rv$winner)) return()
+    
+    if (length(rv$boards) < rv$players) {
+      showNotification("You need to start a new game first!", type = "error")
+      return()
+    }
     
     number_drawn <- sample(rv$numbers_left, 1)
     rv$numbers_left <- setdiff(rv$numbers_left, number_drawn)
@@ -197,7 +234,7 @@ server <- function(input, output) {
     # check for winner & update high score
     for (i in 1:rv$players) {
       if (check_for_bingo(rv$boards[[i]])) {
-        rv$winner <- paste("Player", i, "wins in", rv$move_count, "moves!")
+        rv$winner <- paste(rv$player_names[i], "wins in", rv$move_count, "moves!")
         
         # update high score after win
         if (is.null(rv$high_score) || rv$move_count < rv$high_score) {
@@ -216,7 +253,7 @@ server <- function(input, output) {
     lapply(1:rv$players, function(i) {
       moves_left <- moves_till_bingo(rv$boards[[i]])
       showNotification(
-        paste("Player", i, "is", moves_left, "move(s) away from Bingo!"),
+        paste(rv$player_names[i], "is", moves_left, "move(s) away from Bingo!"),
         type = "warning",
         duration = 2
       )
@@ -254,80 +291,61 @@ server <- function(input, output) {
   
   # renders bingo boards
   output$bingo_boards <- renderUI({
-    if (rv$players == 4) {
-      tagList(
-        fluidRow(
-          column(5, wellPanel(
-            h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board1")
-          )),
-          column(5, wellPanel(
-            h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board2")
-          ))
-        ),
+    req(rv$boards, rv$player_names)
+    
+    rows <- list()
+    
+    i <- 1
+    while (i <= rv$players) {
+      name1 <- if (!is.null(rv$player_names) && length(rv$player_names) >= i) {
+        rv$player_names[i]
+      } else {
+        paste("Player", i)
+      }
+      
+      panel1 <- column(5, wellPanel(
+        h4(name1, style = "font-weight: bold; font-size: 20px;"),
+        tableOutput(paste0("board", i))
+      ))
+      
+      if (i + 1 <= rv$players) {
+        name2 <- if (length(rv$player_names) >= i + 1) {
+          rv$player_names[i + 1]
+        } else {
+          paste("Player", i + 1)
+        }
         
-        tags$br(),
-        
-        fluidRow(
-          column(5, wellPanel(
-            h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board3")
-          )),
-          column(5, wellPanel(
-            h4("Player 4", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board4")
-          ))
-        )
-      )
-    } else if (rv$players == 3) {
-      tagList(
-        fluidRow(
-          column(5, wellPanel(
-            h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board1")
-          )),
-          column(5, wellPanel(
-            h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board2")
-          ))
-        ),
-        
-        tags$br(),
-        
-        fluidRow(
-          column(5, wellPanel(
-            h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
-            tableOutput("board3")
-          ))
-        )
-      )
-    } else if (rv$players == 2) {
-      fluidRow(
-        column(5, wellPanel(
-          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        )),
-        column(5, wellPanel(
-          h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board2")
+        panel2 <- column(5, wellPanel(
+          h4(name2, style = "font-weight: bold; font-size: 20px;"),
+          tableOutput(paste0("board", i + 1))
         ))
-      )
-    } else {
-      fluidRow(
-        column(5, offset = 3, wellPanel(
-          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        ))
-      )
+        
+        rows[[length(rows) + 1]] <- list(
+          fluidRow(panel1, panel2),
+          br()
+        )
+        i <- i + 2
+      } else {
+        rows[[length(rows) + 1]] <- list(
+          fluidRow(panel1),
+          br()
+        )
+        i <- i + 1
+      }
     }
+    
+    tagList(rows)
   })
+  
+  
+  
   
   observe({
     for (i in 1:rv$players) {
       local({
         idx <- i
         output[[paste0("board", idx)]] <- renderUI({
+          req(length(rv$boards) >= idx)
           board <- rv$boards[[idx]]
           table_rows <- lapply(1:5, function(r) {
             tags$tr(
