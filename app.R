@@ -58,7 +58,7 @@ ui <- fluidPage(
   
   tags$style(HTML("
     .control-label[for='players'] {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
     }
     .radio label {
@@ -72,6 +72,15 @@ ui <- fluidPage(
     h2 {
       font-size: 32px;
       font-weight: bold;
+    }
+    h4 {
+      font-size: 22px;
+      font-weight: bold;
+    }
+    h5 {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 8;
     }
   ")),
   
@@ -91,12 +100,21 @@ ui <- fluidPage(
   }
 ")),
   
-  wellPanel(
+  tags$style(HTML("
+  called_number {
+    font-weight: bold;
+  }
+")),
+  
+  # changes header panel
+  div(
+    style = "
+    background: linear-gradient(135deg, #CE5937 0%, #1C6EA4 63%, #C5A600 100%);
+    padding: 20px;
+    border-radius: 10px;
+    color: white;",
     h2("Bingo in R (Shiny Edition)", 
-       style = "
-       font-weight: bold;
-       font-size: 28px; 
-       padding: 10px 15px;")
+       style = "font-weight: bold; font-size: 28px; margin-bottom: 0;")
   ),
   
   br(),
@@ -107,19 +125,38 @@ ui <- fluidPage(
       
       actionButton("new_game", "Start New Game", style = 
                      "font-size: 18px; padding: 6px 10px; background-color: orange; color: white;
-         border-radius: 8px; border: none; box-shadow: 2px 2px 5px grey;"),
+         border-radius: 8px; border: none; box-shadow: 2px 2px 5px grey; margin-top: 8px;"),
       
-      br(), br(),
+      br(),
       
       actionButton("next_num", "Call Next Number", style = 
                      "font-size: 18px; padding: 6px 10px; background-color: orange; color: white;
-         border-radius: 8px; border: none; box-shadow: 2px 2px 5px grey;"),
+         border-radius: 8px; border: none; box-shadow: 2px 2px 5px grey; margin-top: 10px;"),
       
-      br(), br(),
+      br(),
       
       uiOutput("called_number"),
       uiOutput("winner_text"),
-      uiOutput("high_score_text")
+      uiOutput("high_score_text"),
+      
+      br(),
+      
+      tags$hr(),
+      div(class = "faded-panel",
+          h4("Game Stats"),
+          div(style = "font-size: 18px; font-weight: bold; font-style: italic; margin-top: 10px;",
+              textOutput("move_counter")
+          ),
+          div(style = "font-size: 18px; font-weight: bold; font-style: italic;",
+              textOutput("number_pool_left")
+          ),
+      ),
+      
+      tags$hr(),
+      div(
+        style = "margin-top: 12px;",
+        h5("GitHub: ", style = "margin-top: 12px;", tags$a(href = "https://github.com/jfleege", "https://github.com/jfleege", target = "_blank"))
+      )
     ),
     
     mainPanel(
@@ -172,7 +209,7 @@ server <- function(input, output) {
     
     # renders number called
     output$called_number <- renderUI({
-      HTML(paste0("<div style='font-weight: bold; font-size: 18px;'>Last number called: ", number_drawn, "</div>"))
+      HTML(paste0("<div style='font-weight: bold; font-size: 18px; margin-top: 14px;'>Last number called: ", number_drawn, "</div>"))
     })
     
     # warning message
@@ -189,53 +226,83 @@ server <- function(input, output) {
   # renders winner text
   output$winner_text <- renderUI({
     req(rv$winner)
-    HTML(paste0("<div style='margin-top: 12px; font-weight: bold; font-style: italic; font-size: 18px; color: lightgreen;'>", rv$winner, "</div>"))
+    HTML(paste0("<div style='margin-top: 8px; font-weight: bold; font-style: italic; font-size: 18px; color: #66B3FF;'>", rv$winner, "</div>"))
   })
   
   # renders high score
   output$high_score_text <- renderUI({
     if (!is.null(rv$high_score)) {
-      HTML(paste0("<div style='margin-top: 12px; font-size: 18px; font-style: bold;'><strong>Session Best: </strong>" , rv$high_score, " moves</div>"))
+      HTML(paste0("<div style='margin-top: 8px; font-weight: bold; font-size: 18px; font-style: bold;'><strong>Session Best: </strong>" , rv$high_score, " moves</div>"))
     }
   })
+  
+  # move counter
+  output$move_counter <- renderText({
+    paste("Moves so far:", rv$move_count)
+  })
+  
+  # numbers not drawn
+  output$number_pool_left <- renderText({
+    paste("Numbers remaining:", length(rv$numbers_left))
+  })
+  
+  
+  output$link <- renderText({ 
+    format("https://github.com/jfleege") 
+  }) |>
+    bindEvent(input$update) 
   
   # renders bingo boards
   output$bingo_boards <- renderUI({
     if (rv$players == 4) {
-      fluidRow(
-        column(5, wellPanel(
-          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        )),
-        column(5, wellPanel(
-          h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board2")
-        )),
-        column(5, wellPanel(
-          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        )),
-        column(5, wellPanel(
-          h4("Player 4", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board2")
-        ))
-      )
-    } else if (rv$players == 4) {
-      fluidRow(
-        column(5, wellPanel(
-          h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        )),
-        column(5, wellPanel(
-          h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board2")
-        )),
-        column(5, wellPanel(
-          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
-        ))
+      tagList(
+        fluidRow(
+          column(5, wellPanel(
+            h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board1")
+          )),
+          column(5, wellPanel(
+            h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board2")
+          ))
+        ),
+        
+        tags$br(),
+        
+        fluidRow(
+          column(5, wellPanel(
+            h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board3")
+          )),
+          column(5, wellPanel(
+            h4("Player 4", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board4")
+          ))
+        )
       )
     } else if (rv$players == 3) {
+      tagList(
+        fluidRow(
+          column(5, wellPanel(
+            h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board1")
+          )),
+          column(5, wellPanel(
+            h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board2")
+          ))
+        ),
+        
+        tags$br(),
+        
+        fluidRow(
+          column(5, wellPanel(
+            h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
+            tableOutput("board3")
+          ))
+        )
+      )
+    } else if (rv$players == 2) {
       fluidRow(
         column(5, wellPanel(
           h4("Player 1", style = "font-weight: bold; font-size: 20px;"),
@@ -244,10 +311,6 @@ server <- function(input, output) {
         column(5, wellPanel(
           h4("Player 2", style = "font-weight: bold; font-size: 20px;"),
           tableOutput("board2")
-        )),
-        column(5, wellPanel(
-          h4("Player 3", style = "font-weight: bold; font-size: 20px;"),
-          tableOutput("board1")
         ))
       )
     } else {
@@ -285,7 +348,7 @@ server <- function(input, output) {
             style = "border-collapse: collapse; margin-bottom: 30px;",
             tags$thead(
               tags$tr(lapply(c("B", "I", "N", "G", "O"), function(h) {
-                tags$th(style = "border: 3px solid gray; padding: 10px; font-size: 18px;", h)
+                tags$th(style = "border: 3px solid gray; padding: 10px; font-size: 18px; background-color: orange", h)
               }))
             ),
             tags$tbody(table_rows)
